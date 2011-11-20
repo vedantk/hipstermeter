@@ -1,0 +1,87 @@
+<html>
+	<head>
+		<title> Hipstermeter </title>
+		<link rel="icon" href="/static/favicon.ico" />
+		<link type="text/css" rel="stylesheet" href="/static/main.css" />
+		<script type="text/javascript" src="/static/lastfm.api.js"></script>
+		<script type="text/javascript" src="/static/lastfm.api.md5.js"></script>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				$("#button").click(start);
+			});
+
+			var start = function() {
+				var username = $("#entry").val();
+				$("#entry").remove();
+				$("#button").remove();
+				hipstermeter(username);
+			};
+
+			var hipstermeter = function(username) {
+				var api = new LastFM({
+					apiKey: "38bd7f5fa15309060b171dfe3ad013d1",
+					apiSecret: "1ec74d1760090f68d743e5b7bfd28d5a"
+				});
+
+				var errHandler = function(code, msg) {
+					$("#lower").text(msg);
+					$("#upper").text("Last.fm Error: " + code);
+					console.log("[ERROR]: " + code + " msg = " + msg);
+				};
+
+				var topArtists = [];
+				$("#upper").text("Fetching Artists...");
+				api.chart.getTopArtists({limit: 100}, {
+					success: function(data) {
+						var artists = data.artists.artist;
+						for (var k=0; k < artists.length; k++) {
+							topArtists.push(artists[k].name);
+						}
+						processArtists();
+					}, error: errHandler
+				});
+
+				var done = false;
+				var processArtists = function() {
+					$("#upper").text("Tasteometerizing...");
+					api.tasteometer.compare({
+						type1: "user",
+						type2: "artists",
+						value1: username,
+						value2: topArtists.join()
+					}, {
+						success: handleTasteometer,
+						error: errHandler
+					});
+				};
+
+				var handleTasteometer = function(data) {
+					var score = parseFloat(data.comparison.result.score);
+					if (score <= 0 || score >= 1) {
+						$("#upper").text("o_O");
+						$("#lower").text("Invalid last.fm data.");
+					} else {
+						score = 1 - score;
+						$("#lower").text("Enjoy your hipsterscore.");
+						$("#upper").text((score * 1000).toFixed(1) + " / 1000");
+					}
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<div id="wrapper" class="bigtext">
+			<div id="content">
+				<label id="upper"> Last.fm Username </label>
+				<br />
+				<input id="entry" type="text" />
+				<input id="button" type="submit" value="Submit" />
+			</div>
+			<div id="push"></div>
+		</div>
+		<div id="lower">
+			Quantify your taste in music.
+		</div>
+	</body>
+</html>
